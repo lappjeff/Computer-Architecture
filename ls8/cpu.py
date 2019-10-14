@@ -9,11 +9,11 @@ class CPU:
     def __init__(self):
         """Construct a new CPU."""
         self.ram = [0] * \
-            0xFF  # Random Access MEMORY - has 0xFF hex, aka  256 bits
+            0xFF  # Random Access MEMORY - has 0xFF hex, aka  256 bits - Each index should contain an instruction, like ADD or LDI along with whatever params it needs following it
         self.reg = [0] * 0x08  # registries - 8 registries
         self.pc = 0
-        self.mar = None
-        self.mdr = None
+        self.mar = 0  # Memory Address Register, holds the MEMORY ADDRESS we're reading or writing
+        self.mdr = 0  # Memory Data Register, holds the VALUE to write or the VALUE just read
 
     def load(self):
         """Load a program into memory."""
@@ -35,6 +35,16 @@ class CPU:
         for instruction in program:
             self.ram[address] = instruction
             address += 1
+
+    def ram_read(self, address):
+        self.mar = address
+        self.mdr = self.ram[self.mar]
+        return self.mdr
+
+    def ram_write(self, address, value):
+        self.mar = address
+        self.mdr = value
+        self.ram[mar] = self.mdr
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
