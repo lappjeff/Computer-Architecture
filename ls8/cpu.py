@@ -37,13 +37,11 @@ class CPU:
         address = self.ram_read(self.pc + 1)
         value = self.ram_read(self.pc + 2)
         self.reg[address] = value
-        self.pc += 3
 
     def handle_prn(self):
         address = self.ram[self.pc + 1]
         value = self.reg[address]
         print(value)
-        self.pc += 2
 
     def handle_hlt(self):
         sys.exit(1)
@@ -106,9 +104,8 @@ class CPU:
 
         while running is True:
             lr = self.ram_read(self.pc)
-
-            if lr in self.branch_table:
-                self.branch_table[lr]()
+            self.branch_table[lr]()
+            self.pc += (lr >> 6) + 1
             elif lr == HLT:
                 running = False
             else:
