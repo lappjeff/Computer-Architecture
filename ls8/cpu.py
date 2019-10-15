@@ -4,6 +4,7 @@ import sys
 LDI = 0b10000010
 PRN = 0b01000111
 HLT = 0b00000001
+MUL = 0b10100010
 
 
 class CPU:
@@ -18,9 +19,12 @@ class CPU:
         self.mar = 0  # Memory Address Register, holds the MEMORY ADDRESS we're reading or writing
         self.mdr = 0  # Memory Data Register, holds the VALUE to write or the VALUE just read
         self.branch_table = {
+            "alu_ops": {
+                MUL: "MUL"
+            },
             LDI: self.handle_ldi,
             PRN: self.handle_prn,
-            HLT: self.handle_hlt
+            HLT: self.handle_hlt,
         }
 
     def ram_read(self, address):
@@ -41,13 +45,12 @@ class CPU:
         address = self.ram_read(self.pc + 1)
         value = self.ram_read(self.pc + 2)
         self.reg[address] = value
-        # self.pc += 3
+        print(f"new value {self.reg[address]} at {address}")
 
     def handle_prn(self):
-        address = self.ram[self.pc + 1]
+        address = self.ram_read(self.pc + 1)
         value = self.reg[address]
         print(value)
-        # self.pc += 2
 
     def handle_hlt(self):
         sys.exit(1)
@@ -76,27 +79,14 @@ class CPU:
                 f"File could not be found. Please make sure you are using a valid file path")
             sys.exit(1)
 
-        #  program = [
-        #     # From print8.ls8
-        #     0b10000010,  # LDI R0,8
-        #     0b00000000,
-        #     0b00001000,
-        #     0b01000111,  # PRN R0
-        #     0b00000000,
-        #     0b00000001,  # HLT
-        # ]
-
-        # for instruction in program:
-        #     self.ram[address] = instruction
-        #     address += 1
-
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
-
+        print(f"reg_a: {reg_a}, reg_b: {reg_b}")
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-
-        # elif op == "SUB": etc
+        elif op == "MUL":
+            print(f'multiplying {self.reg[reg_a]} by {self.reg[reg_b]} ')
+            self.reg[reg_a] *= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -127,9 +117,19 @@ class CPU:
 
         while running is True:
             lr = self.ram_read(self.pc)
-            # print(lr)
             if lr in self.branch_table:
                 self.branch_table[lr]()
+                self.pc += (lr >> 6) + 1
+            elif lr in self.branch_table["alu_ops"]:
+                # op key from branch_table nested alu_ops table
+                op = self.branch_table["alu_ops"][lr]
+                # registry a
+                reg_a = self.ram_read(self.pc + 1)
+                # registry b
+                reg_b = self.ram_read(self.pc + 2)
+
+                # call alu operation with above vars
+                self.alu(op, reg_a, reg_b)
                 self.pc += (lr >> 6) + 1
             elif lr == HLT:
                 running = False
