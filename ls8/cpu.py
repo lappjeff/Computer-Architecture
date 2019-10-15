@@ -29,6 +29,10 @@ class CPU:
         return self.mdr
 
     def ram_write(self, address, value):
+        """
+        Value - value to insert at address
+        Address - address in ram to insert param value at
+        """
         self.mar = address
         self.mdr = value
         self.ram[self.mar] = self.mdr
@@ -37,35 +41,54 @@ class CPU:
         address = self.ram_read(self.pc + 1)
         value = self.ram_read(self.pc + 2)
         self.reg[address] = value
+        # self.pc += 3
 
     def handle_prn(self):
         address = self.ram[self.pc + 1]
         value = self.reg[address]
         print(value)
+        # self.pc += 2
 
     def handle_hlt(self):
         sys.exit(1)
 
-    def load(self):
+    def load(self, file_path):
         """Load a program into memory."""
 
-        address = 0
+        try:
+            address = 0
 
-        # For now, we've just hardcoded a program:
+            with open(file_path) as f:
+                for line in f:
+                    # split line at hash symbol
+                    comment_split = line.split('#')
 
-        program = [
-            # From print8.ls8
-            0b10000010,  # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111,  # PRN R0
-            0b00000000,
-            0b00000001,  # HLT
-        ]
+                    # convert from binary string to number and strips all surrounding whitespace
+                    binary_string = comment_split[0].strip()
+                    try:
+                        num = int(binary_string, base=2)
+                    except ValueError:
+                        continue
+                    self.ram_write(address, num)
+                    address += 1
+        except FileNotFoundError:
+            print(
+                f"File could not be found. Please make sure you are using a valid file path")
+            sys.exit(1)
 
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
+        #  program = [
+        #     # From print8.ls8
+        #     0b10000010,  # LDI R0,8
+        #     0b00000000,
+        #     0b00001000,
+        #     0b01000111,  # PRN R0
+        #     0b00000000,
+        #     0b00000001,  # HLT
+        # ]
+
+        # for instruction in program:
+        #     self.ram[address] = instruction
+        #     address += 1
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
@@ -104,9 +127,12 @@ class CPU:
 
         while running is True:
             lr = self.ram_read(self.pc)
-            self.branch_table[lr]()
-            self.pc += (lr >> 6) + 1
+            # print(lr)
+            if lr in self.branch_table:
+                self.branch_table[lr]()
+                self.pc += (lr >> 6) + 1
             elif lr == HLT:
                 running = False
             else:
                 print(f"Invalid command {lr}")
+                self.pc += 1
