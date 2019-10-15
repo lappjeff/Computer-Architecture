@@ -5,6 +5,8 @@ LDI = 0b10000010
 PRN = 0b01000111
 HLT = 0b00000001
 MUL = 0b10100010
+PUSH = 0b01000101
+POP = 0b01000110
 
 
 class CPU:
@@ -16,6 +18,8 @@ class CPU:
             0xFF  # Random Access MEMORY - has 0xFF hex, aka  256 bits - Each index should contain an instruction, like ADD or LDI along with whatever params it needs following it
         self.reg = [0] * 0x08  # registries - 8 registries
         self.pc = 0
+        self.sp = 7
+        self.reg[7] = 0xF4
         self.mar = 0  # Memory Address Register, holds the MEMORY ADDRESS we're reading or writing
         self.mdr = 0  # Memory Data Register, holds the VALUE to write or the VALUE just read
         self.branch_table = {
@@ -25,6 +29,8 @@ class CPU:
             LDI: self.handle_ldi,
             PRN: self.handle_prn,
             HLT: self.handle_hlt,
+            PUSH: self.handle_push,
+            POP: self.handle_pop
         }
 
     def ram_read(self, address):
@@ -47,6 +53,26 @@ class CPU:
     def handle_prn(self, address, *args):
         value = self.reg[address]
         print(value)
+
+    def handle_push(self, address, *args):
+        # index of register with desired value, retreived from RAM
+        reg_index = address
+        # value of register that we want to copy over to stack
+        value = self.reg[reg_index]
+        # decrement value stored in R7(starts as 0xF4 -- 244)
+        self.reg[self.sp] -= 1
+        # write register value to stack at the index number found in R7
+        self.ram_write(self.reg[self.sp], value)
+
+    def handle_pop(self, address, *args):
+        # index of register for popped stack value to be inserted at
+        reg_index = address
+        # value to insert at register index
+        value = self.ram_read(self.reg[self.sp])
+        # insert value at reg_index
+        self.reg[reg_index] = value
+        # reduce size of stack
+        self.reg[self.sp] += 1
 
     def handle_hlt(self):
         sys.exit(1)
