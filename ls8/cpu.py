@@ -1,6 +1,9 @@
 """CPU functionality."""
 
 import sys
+LDI = 0b10000010
+PRN = 0b01000111
+HLT = 0b00000001
 
 
 class CPU:
@@ -14,6 +17,36 @@ class CPU:
         self.pc = 0
         self.mar = 0  # Memory Address Register, holds the MEMORY ADDRESS we're reading or writing
         self.mdr = 0  # Memory Data Register, holds the VALUE to write or the VALUE just read
+        self.branch_table = {
+            LDI: self.handle_ldi,
+            PRN: self.handle_prn,
+            HLT: self.handle_hlt
+        }
+
+    def ram_read(self, address):
+        self.mar = address
+        self.mdr = self.ram[self.mar]
+        return self.mdr
+
+    def ram_write(self, address, value):
+        self.mar = address
+        self.mdr = value
+        self.ram[self.mar] = self.mdr
+
+    def handle_ldi(self, address=None):
+        address = self.ram_read(self.pc + 1)
+        value = self.ram_read(self.pc + 2)
+        self.reg[address] = value
+        self.pc += 3
+
+    def handle_prn(self):
+        address = self.ram[self.pc + 1]
+        value = self.reg[address]
+        print(value)
+        self.pc += 2
+
+    def handle_hlt(self):
+        sys.exit(1)
 
     def load(self):
         """Load a program into memory."""
@@ -36,21 +69,12 @@ class CPU:
             self.ram[address] = instruction
             address += 1
 
-    def ram_read(self, address):
-        self.mar = address
-        self.mdr = self.ram[self.mar]
-        return self.mdr
-
-    def ram_write(self, address, value):
-        self.mar = address
-        self.mdr = value
-        self.ram[mar] = self.mdr
-
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
+
         # elif op == "SUB": etc
         else:
             raise Exception("Unsupported ALU operation")
@@ -77,4 +101,15 @@ class CPU:
 
     def run(self):
         """Run the CPU."""
-        pass
+
+        running = True
+
+        while running is True:
+            lr = self.ram_read(self.pc)
+
+            if lr in self.branch_table:
+                self.branch_table[lr]()
+            elif lr == HLT:
+                running = False
+            else:
+                print(f"Invalid command {lr}")
