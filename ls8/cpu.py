@@ -41,14 +41,10 @@ class CPU:
         self.mdr = value
         self.ram[self.mar] = self.mdr
 
-    def handle_ldi(self, address=None):
-        address = self.ram_read(self.pc + 1)
-        value = self.ram_read(self.pc + 2)
+    def handle_ldi(self, address, value):
         self.reg[address] = value
-        print(f"new value {self.reg[address]} at {address}")
 
-    def handle_prn(self):
-        address = self.ram_read(self.pc + 1)
+    def handle_prn(self, address, *args):
         value = self.reg[address]
         print(value)
 
@@ -56,7 +52,7 @@ class CPU:
         sys.exit(1)
 
     def load(self, file_path):
-        """Load a program into memory."""
+        """Load a .ls8 file from given path and insert into memory."""
 
         try:
             address = 0
@@ -81,11 +77,9 @@ class CPU:
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
-        print(f"reg_a: {reg_a}, reg_b: {reg_b}")
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
         elif op == "MUL":
-            print(f'multiplying {self.reg[reg_a]} by {self.reg[reg_b]} ')
             self.reg[reg_a] *= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
@@ -117,9 +111,16 @@ class CPU:
 
         while running is True:
             lr = self.ram_read(self.pc)
-            if lr in self.branch_table:
+            if lr == HLT:
                 self.branch_table[lr]()
+            elif lr in self.branch_table:
+
+                address = self.ram_read(self.pc + 1)
+                value = self.ram_read(self.pc + 2)
+
+                self.branch_table[lr](address, value)
                 self.pc += (lr >> 6) + 1
+
             elif lr in self.branch_table["alu_ops"]:
                 # op key from branch_table nested alu_ops table
                 op = self.branch_table["alu_ops"][lr]
@@ -131,8 +132,6 @@ class CPU:
                 # call alu operation with above vars
                 self.alu(op, reg_a, reg_b)
                 self.pc += (lr >> 6) + 1
-            elif lr == HLT:
-                running = False
             else:
                 print(f"Invalid command {lr}")
                 self.pc += 1
